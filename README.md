@@ -1,0 +1,2 @@
+# AI-Powered-Email-Classification-Approval-Automation
+Designed an AI-assisted email workflow using local n8n and Ollama models to classify incoming messages and route them according to their content. Emails can be categorized for ignoring, manual review, or AI-generated replies. Telegram notifications and approval actions allow a human review and approve or reject a proposed reply before it is sent.
