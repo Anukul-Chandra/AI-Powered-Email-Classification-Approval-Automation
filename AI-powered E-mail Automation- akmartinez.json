@@ -1,0 +1,1199 @@
+{
+  "name": "AI-powered E-mail Automation- akmartinez",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -2704,
+        80
+      ],
+      "id": "9342f9e5-6512-46dc-aa96-b10d785b1e97",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:5678/api/v1/executions?workflowId={{ $workflow.id }}&status=running&limit=50",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "put n8n api key"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2480,
+        80
+      ],
+      "id": "a92ce2af-ca67-4315-9900-58d56487354e",
+      "name": "Check Running Executions"
+    },
+    {
+      "parameters": {
+        "jsCode": "const res = $input.first().json;\n\nif (!res || !Array.isArray(res.data)) {\n  throw new Error('Guard: unexpected n8n API response. Check API key / URL.');\n}\n\nconst me = Number($execution.id);\nconst older = res.data.filter(e => Number(e.id) < me);\n\nif (older.length > 0) {\n  return [];\n}\n\nreturn [{ json: { go: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2256,
+        80
+      ],
+      "id": "9f277d94-542b-4ab6-81f2-db18ab69c771",
+      "name": "Skip If Already Running"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 3,
+        "filters": {
+          "labelIds": [
+            "Label_4211862516841724761"
+          ],
+          "readStatus": "unread"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -2032,
+        80
+      ],
+      "id": "ac88cc3c-cb7b-4beb-84b0-76f14d23ec56",
+      "name": "Get many messages",
+      "webhookId": "c0ee7265-ebf8-4e7c-8490-a0d3eeaaeb36",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "put gmail client id",
+          "name": "put gmail client secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1760,
+        80
+      ],
+      "id": "444c9651-dd75-41e5-a21a-67ed9ad369b2",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -1536,
+        96
+      ],
+      "id": "8876d121-6b72-4113-bfa4-8765f96a85f6",
+      "name": "Mark a message as read",
+      "webhookId": "135b7530-c745-4fe0-ae7e-2cec8264c996",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "put gmail client id",
+          "name": "put gmail client secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const answerBank = {\n  _note: \"PROVISIONAL TEST ANSWER BANK — These answers are for workflow testing only and have NOT been approved by 2-SMT. Replace or confirm them with the client's official answers before production. Null answers deliberately require MANUAL_REVIEW.\",\n  facts: [\n    {\n      id: \"contact-mailbox\",\n      category: \"general\",\n      keywords: [\"contact\", \"reach you\", \"email address\", \"who do i email\"],\n      answer: \"Thank you for contacting us. I can help direct your inquiry, but I don't have a verified support email address to share. Our team will confirm the correct contact details.\"\n    },\n    {\n      id: \"response-sla\",\n      category: \"general\",\n      keywords: [\"how fast\", \"response time\", \"when will you reply\", \"how long\"],\n      answer: \"Thank you for reaching out. I don't have a verified response-time commitment to share. Our team will confirm the expected response time.\"\n    },\n    {\n      id: \"services-offered\",\n      category: \"sales\",\n      keywords: [\"what do you offer\", \"services\", \"training\", \"consultation\", \"1-hour session\", \"book a session\"],\n      answer: \"Thank you for your interest. I don't have a verified list of current services or training options, so I don't want to provide inaccurate information. Our team can confirm the available options and next steps.\"\n    },\n    {\n      id: \"scheduling-link\",\n      category: \"sales\",\n      keywords: [\"schedule\", \"book a call\", \"calendly\", \"booking link\"],\n      answer: null\n    },\n    {\n      id: \"handoff-5w-pattern\",\n      category: \"support\",\n      keywords: [\"handoff\", \"hand off\", \"pass down\", \"shift change\", \"shift handover\", \"what should i write\", \"documentation\"],\n      answer: \"A useful shift-handover note can include: what happened, where it happened, when it happened, what actions were taken, and what needs follow-up. Include only verified observations and follow your organization's documentation and handover procedures.\"\n    },\n    {\n      id: \"swaptronics-definition\",\n      category: \"support\",\n      keywords: [\"swaptronics\", \"known good board\", \"board swap\"],\n      answer: \"I don't have a verified, organization-specific definition or approved procedure for Swaptronics. Please confirm the intended meaning and any applicable procedure with your technical team before taking action.\"\n    },\n    {\n      id: \"safety-escalation-boundary\",\n      category: \"troubleshooting\",\n      keywords: [\"machine down\", \"line down\", \"line stop\", \"urgent\", \"won't cycle\", \"wont cycle\", \"yield issue\", \"asap\", \"tool fault\"],\n      answer: \"This issue may require prompt attention from the responsible operations or technical team. Follow your site's safety and escalation procedures. Do not bypass safety devices or attempt an unfamiliar repair. If there is an immediate safety risk, follow the site's emergency procedures.\"\n    },\n    {\n      id: \"haptic-supervisor-curriculum-exists\",\n      category: \"sales\",\n      keywords: [\"haptic supervisor\", \"curriculum\", \"webinar training\", \"workbook\"],\n      answer: \"Thank you for your interest. I don't have verified information confirming the availability or contents of the Haptic Supervisor curriculum, webinars, or workbook. Our team will need to confirm these details.\"\n    },\n    {\n      id: \"pricing\",\n      category: \"sales\",\n      keywords: [\"price\", \"cost\", \"how much\", \"pricing\", \"rate\", \"quote\"],\n      answer: null\n    },\n    {\n      id: \"product-availability\",\n      category: \"sales\",\n      keywords: [\"available\", \"when can i get\", \"release date\", \"launch date\"],\n      answer: null\n    },\n    {\n      id: \"delivery-format\",\n      category: \"sales\",\n      keywords: [\"delivery\", \"how is it delivered\", \"in person\", \"remote\", \"online\"],\n      answer: null\n    }\n  ]\n};\n\nreturn $input.all().map(item => ({\n  json: {\n    ...item.json,\n    answerBank\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        240
+      ],
+      "id": "85dc7123-938b-453c-b6f2-a227fb340503",
+      "name": "Load Answer Bank"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are the email triage/classification agent for a customer-support automation.\n\nYour ONLY job is to classify the incoming email. Do NOT write a customer reply.\n\n\nIncoming email:\n\nFrom: {{ $('Loop Over Items').item.json.from || $('Loop Over Items').item.json.From || '' }}\nTo: {{ $('Loop Over Items').item.json.to || $('Loop Over Items').item.json.To || '' }}\nSubject: {{ $('Loop Over Items').item.json.subject || $('Loop Over Items').item.json.Subject || '' }}\nBody: {{ $('Loop Over Items').item.json.textPlain || $('Loop Over Items').item.json.text || $('Loop Over Items').item.json.snippet || '' }}\n\nAPPROVED ANSWER BANK:\n{{ JSON.stringify($json.answerBank) }}\n\n\nANSWER BANK RULES:\n- Review the email subject and body against the approved answer bank before deciding whether an automatic reply is allowed.\n- Only consider an answer approved if it contains real, usable answer content.\n- A null, missing, empty, or placeholder answer is NOT an approved answer.\n- Placeholder examples include text such as \"[placeholder - real answer supplied by 2-SMT...]\".\n- If the email requires information that is not covered by a suitable approved answer, classify it as MANUAL_REVIEW.\n- Never invent company facts, prices, policies, availability, dates, links, or promises.\n- If the answer bank contains a suitable approved answer, the email may be classified as REPLY only if it also meets all other safety and classification rules below.\n- The presence of an answer-bank keyword alone does not mean that an approved answer exists.\n- If the answer bank is missing, invalid, or unavailable, classify genuine customer-support requests as MANUAL_REVIEW rather than guessing.\n\nChoose exactly ONE decision:\n\n1. IGNORE\n\nUse when the email is clearly not a genuine customer-support request, including:\n- Newsletters, marketing emails, promotional campaigns, sales offers, and discount advertisements.\n- Automated job alerts or recommendations unrelated to the company's customer-support scope.\n- Automated system notifications that do not require customer-support action.\n- Mailer-daemon or delivery-status messages.\n- Obvious spam.\n- No-reply informational messages that contain no customer request.\n\nRead and understand the email's overall purpose using its sender, subject, body, and context. Do not classify based on isolated keywords alone.\n\nClearly promotional or irrelevant emails MUST be classified as IGNORE. Do not send them to MANUAL_REVIEW merely because they contain offers, discounts, product information, or marketing content. Do not choose REPLY for a promotional email unless it also contains a genuine customer-support request that independently qualifies for REPLY.\n\nDo NOT ignore a genuine customer-support request just because it is short, poorly written, or from an unknown sender.\n\n2. MANUAL_REVIEW\n\nUse when a human must inspect the email before any AI-generated reply is proposed, including:\n- Attachments or documents that require human inspection.\n- Legal complaints, legal threats, or regulatory matters.\n- Sensitive banking or payment information.\n- Suspected fraud, account compromise, or security incidents.\n- Medical or sensitive personal data.\n- Unclear or high-risk requests where an incorrect reply could cause harm.\n- Unsupported or unclear content that cannot be handled safely.\n- Requests involving refunds, payments, card details, or passwords.\n- Urgent safety or operational issues.\n- Genuine customer-support requests that require information not covered by a suitable, approved answer in the answer bank.\n- Requests for which the relevant answer-bank entry is null, missing, empty, or a placeholder.\n- Genuine customer-support requests whose intent or classification cannot be determined reliably.\n\nSensitive or high-risk requests MUST be classified as MANUAL_REVIEW even if a matching answer-bank entry exists.\n\nDo NOT use MANUAL_REVIEW merely because an email is promotional, automated, or unrelated to customer support. Clearly irrelevant messages belong in IGNORE.\n\n3. REPLY\n\nUse only for genuine, normal customer-support requests that can safely receive an AI-generated reply draft, including:\n- Account help.\n- Product or service questions.\n- Order or delivery questions.\n- Ordinary billing questions without sensitive financial information.\n- Normal troubleshooting.\n- General customer-service requests.\n\nChoose REPLY only when the request is safe to handle AND the required information is supported by suitable, real, approved answer-bank content.\n\nDo not choose REPLY merely because a question is common, a keyword matches the answer bank, or the email mentions a product, service, price, or discount.\n\nNever invent missing information or reply to promotional emails that contain no genuine customer-support request.\n\nPriority:\n- low: routine or non-urgent.\n- medium: normal issue needing attention.\n- high: urgent, security, payment, legal, or serious service-impact issue.\n\nIf multiple conditions apply, choose the safest appropriate decision.\n\nIf the email is clearly spam or a non-support message, IGNORE may be used even when no answer-bank entry matches.\n\nIf classification is uncertain, the answer bank is unavailable, or the output cannot be determined reliably, use MANUAL_REVIEW for genuine customer-support requests. Never use IGNORE as a fallback for uncertainty.\n\nReturn VALID JSON ONLY. No markdown, no explanation before or after JSON.\n\nExact schema:\n{\n  \"decision\": \"IGNORE\" | \"MANUAL_REVIEW\" | \"REPLY\",\n  \"category\": \"short category name\",\n  \"priority\": \"low\" | \"medium\" | \"high\",\n  \"reason\": \"one short sentence explaining the classification\"\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -784,
+        240
+      ],
+      "id": "a5b8a8ed-e2f4-4943-b62b-ea272d152077",
+      "name": "AI Agent",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": "gemma3:12b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -784,
+        384
+      ],
+      "id": "4148dc2d-7981-4df1-b519-78b9ebcdc43a",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "put ollama api key",
+          "name": "put ollama api key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.output ?? $json.text ?? $json.response ?? '';\n\nconst email = $('Loop Over Items').item.json;\nconst answerBank =\n  $('Load Answer Bank').item.json.answerBank ?? null;\n\nfunction cleanHtml(value) {\n  return String(value ?? '')\n    .replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi, ' ')\n    .replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi, ' ')\n    .replace(/<[^>]*>/g, ' ')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&lt;/gi, '<')\n    .replace(/&gt;/gi, '>')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;|&apos;/gi, \"'\")\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction normalize(value) {\n  return String(value ?? '')\n    .toLowerCase()\n    .replace(/[\\u2018\\u2019]/g, \"'\")\n    .replace(/[^a-z0-9]+/g, ' ')\n    .trim();\n}\n\nconst subject = email.subject || email.Subject || '';\nconst emailBody =\n  email.textPlain ||\n  email.text ||\n  cleanHtml(email.html || email.textHtml || '') ||\n  email.snippet ||\n  '';\n\nconst emailText = normalize(`${subject} ${emailBody}`);\n\nlet parsed;\n\ntry {\n  const cleaned = String(raw)\n    .replace(/^```json\\s*/i, '')\n    .replace(/^```\\s*/i, '')\n    .replace(/\\s*```$/i, '')\n    .trim();\n\n  parsed = JSON.parse(cleaned);\n\n  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {\n    throw new Error('Invalid classifier object');\n  }\n} catch {\n  parsed = {\n    decision: 'MANUAL_REVIEW',\n    category: 'classification_error',\n    priority: 'high',\n    reason: 'Classifier output was invalid and requires human review.'\n  };\n}\n\nconst allowed = ['IGNORE', 'MANUAL_REVIEW', 'REPLY'];\n\nlet decision = String(parsed.decision || '').toUpperCase();\nlet category = parsed.category || 'uncategorized';\nlet priority = ['low', 'medium', 'high'].includes(\n  String(parsed.priority || '').toLowerCase()\n)\n  ? String(parsed.priority).toLowerCase()\n  : 'high';\n\nlet reason = parsed.reason || 'Classification reason is missing.';\n\nif (!allowed.includes(decision)) {\n  decision = 'MANUAL_REVIEW';\n  category = 'classification_error';\n  priority = 'high';\n  reason = 'Classifier returned an invalid decision.';\n}\n\nconst sensitivePatterns = [\n  /\\brefunds?\\b/i,\n  /\\bpayments?\\b/i,\n  /\\bcredit cards?\\b/i,\n  /\\bdebit cards?\\b/i,\n  /\\bcard details?\\b/i,\n  /\\bpasswords?\\b/i,\n  /\\bcredentials?\\b/i\n];\n\nconst urgentPatterns = [\n  /\\bmachine down\\b/i,\n  /\\bline down\\b/i,\n  /\\bline stop\\b/i,\n  /\\bwon't cycle\\b/i,\n  /\\bwont cycle\\b/i,\n  /\\btool fault\\b/i,\n  /\\byield issue\\b/i,\n  /\\basap\\b/i\n];\n\nif (sensitivePatterns.some(p => p.test(emailText))) {\n  decision = 'MANUAL_REVIEW';\n  category = 'sensitive_request';\n  priority = 'high';\n  reason = 'Sensitive payment or credential-related content requires human review.';\n} else if (urgentPatterns.some(p => p.test(emailText))) {\n  decision = 'MANUAL_REVIEW';\n  category = 'urgent_operational_issue';\n  priority = 'high';\n  reason = 'Urgent operational issue requires human review.';\n}\n\nconst facts = Array.isArray(answerBank?.facts)\n  ? answerBank.facts\n  : [];\n\nconst matchedAnswerFacts = facts.filter(fact => {\n  if (!fact || !Array.isArray(fact.keywords)) return false;\n\n  return fact.keywords.some(keyword => {\n    const term = normalize(keyword);\n    return term.length > 0 && (` ${emailText} `).includes(` ${term} `);\n  });\n});\n\nfunction isApprovedAnswer(fact) {\n  if (typeof fact?.answer !== 'string') return false;\n\n  const answer = fact.answer.trim();\n\n  return answer.length > 0 &&\n    !/placeholder|supplied by 2-smt/i.test(answer);\n}\n\nif (decision === 'REPLY') {\n  if (!Array.isArray(answerBank?.facts)) {\n    decision = 'MANUAL_REVIEW';\n    category = 'answer_bank_unavailable';\n    priority = 'high';\n    reason = 'Answer Bank is missing or invalid.';\n  } else if (matchedAnswerFacts.length === 0) {\n    decision = 'MANUAL_REVIEW';\n    category = 'unsupported_request';\n    priority = 'high';\n    reason = 'No matching Answer Bank entry was found.';\n  } else if (!matchedAnswerFacts.every(isApprovedAnswer)) {\n    decision = 'MANUAL_REVIEW';\n    category = 'answer_not_approved';\n    priority = 'high';\n    reason = 'A matching Answer Bank entry has no approved usable answer.';\n  }\n}\n\nreturn [{\n  json: {\n    decision,\n    category,\n    priority,\n    reason,\n    classifierRaw: raw,\n    messageId: email.id || email.messageId || email.message_id || '',\n    threadId: email.threadId || email.thread_id || '',\n    from: email.from || email.From || '',\n    to: email.to || email.To || '',\n    subject,\n    emailBody,\n    answerBank,\n    matchedAnswerFacts: matchedAnswerFacts.map(fact => ({\n      id: fact.id,\n      category: fact.category,\n      answer: fact.answer\n    }))\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        240
+      ],
+      "id": "80a7a03f-2c64-41e8-8dda-84a2e5a996c4",
+      "name": "Parse Classification"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dccd9620-23b6-4dce-8d2f-e4d946a820c7",
+              "leftValue": "={{ $json.decision }}",
+              "rightValue": "IGNORE",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -368,
+        112
+      ],
+      "id": "b5d88222-3f32-46ed-830d-4f1e6a650f23",
+      "name": "Ignore?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e0ebfeb5-4f61-4f19-b7a9-a5944f057f89",
+              "leftValue": "={{ $('Parse Classification').item.json.decision }}",
+              "rightValue": "MANUAL_REVIEW",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        16,
+        128
+      ],
+      "id": "fc1cb657-4674-4ba3-b0c5-16f9e9f4253b",
+      "name": "Manual Review?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "74b2f219-de52-44e7-8bf6-4f494d8c6c1b",
+              "name": "Timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "0026079a-24f4-49bc-bfe6-d541984bb0e7",
+              "name": "From",
+              "value": "={{ $('Parse Classification').item.json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "a90d43e3-70c6-482c-a431-36da80332caf",
+              "name": "Subject",
+              "value": "={{ $('Parse Classification').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "1e786958-e297-49e0-a6f9-e3205e6d1326",
+              "name": "Category",
+              "value": "={{ $('Parse Classification').item.json.category }}",
+              "type": "string"
+            },
+            {
+              "id": "590c0c9e-f29c-4b0e-be43-1f9de8b0700d",
+              "name": "Priority",
+              "value": "={{ $('Parse Classification').item.json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "67eee5cc-0b78-453f-926e-d857dd170c26",
+              "name": "Reason",
+              "value": "={{ $json.error ? ('AI reply draft failed: ' + (typeof $json.error === 'string' ? $json.error : ($json.error.message || JSON.stringify($json.error))).slice(0, 200) + ' | Classifier said: ' + $('Parse Classification').item.json.reason) : $('Parse Classification').item.json.reason }}",
+              "type": "string"
+            },
+            {
+              "id": "8fd732d4-84cb-4c94-934b-14f1af3b259c",
+              "name": "Message ID",
+              "value": "={{ $('Parse Classification').item.json.messageId }}",
+              "type": "string"
+            },
+            {
+              "id": "d7a0464c-0ff2-4f37-83d3-0e49d6a7f832",
+              "name": "Thread ID",
+              "value": "={{ $('Parse Classification').item.json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "64d75eb9-1769-4f97-afeb-f29d127f7569",
+              "name": "Status",
+              "value": "Manual Review",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        -144
+      ],
+      "id": "605c3628-4c29-470e-b069-93e09b593906",
+      "name": "Prepare Manual Review Log"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc",
+          "mode": "list",
+          "cachedResultName": "Email State Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $now }}",
+            "request_id": "={{ $('Parse Classification').item.json.messageId }}",
+            "status": "MANUAL_REVIEW",
+            "approval_status": "PENDING_REVIEW",
+            "sent_status": "NO",
+            "message_id": "={{ $('Loop Over Items').item.json.id }}",
+            "thread_id": "={{ $('Loop Over Items').item.json.threadId }}",
+            "sender": "={{ $('Loop Over Items').item.json.From.match(/<([^>]+)>/)?.[1] || $('Loop Over Items').item.json.From }}",
+            "subject": "={{ $('Loop Over Items').item.json.Subject || 'No Subject' }}",
+            "to": "={{ $('Loop Over Items').item.json.To || '' }}",
+            "reply_subject": "={{ $('Loop Over Items').item.json.Subject || '' }}",
+            "output": "={{ $json.Reason }}"
+          },
+          "matchingColumns": [
+            "request_id"
+          ],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "approval_status",
+              "displayName": "approval_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sent_status",
+              "displayName": "sent_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "thread_id",
+              "displayName": "thread_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sender",
+              "displayName": "sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "to",
+              "displayName": "to",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reply_subject",
+              "displayName": "reply_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reply_body",
+              "displayName": "reply_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "output",
+              "displayName": "output",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        704,
+        -144
+      ],
+      "id": "cea30180-c8e1-4c70-a94e-77084b4ab366",
+      "name": "Log Manual Review in Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "put google sheets client id",
+          "name": "put google sheets client secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = s => String(s ?? '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nconst c = $('Parse Classification').item.json;\nconst reason = $('Prepare Manual Review Log').item.json.Reason ?? c.reason;\n\nconst text = [\n  '⚠️ <b>MANUAL REVIEW REQUIRED</b>',\n  '',\n  `<b>From:</b> ${esc(c.from)}`,\n  `<b>Subject:</b> ${esc(c.subject || 'No Subject')}`,\n  `<b>Category:</b> ${esc(c.category)}`,\n  `<b>Priority:</b> ${esc(c.priority)}`,\n  '',\n  '<b>Reason:</b>',\n  esc(String(reason ?? '').slice(0, 3000))\n].join('\\n');\n\nreturn { json: { ...$json, telegram_text: text } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        -144
+      ],
+      "id": "347919bb-7280-4ee9-b69c-ecd95edd27dd",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "chatId": "5246817966",
+        "text": "={{ $json.telegram_text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📧 Open Gmail",
+                    "additionalFields": {
+                      "url": "={{ 'https://mail.google.com/mail/u/0/#inbox/' + $('Parse Classification').item.json.threadId }}"
+                    }
+                  },
+                  {
+                    "text": "✅ Mark Reviewed",
+                    "additionalFields": {
+                      "callback_data": "={{ 'mark_reviewed|' + $('Parse Classification').item.json.messageId }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1184,
+        -144
+      ],
+      "id": "aba8d424-c12f-4baf-bc36-a1996e3ebb83",
+      "name": "Telegram - Send a Manual Review Alert",
+      "webhookId": "f916414b-be63-408f-a6cd-0445d887f959",
+      "credentials": {
+        "telegramApi": {
+          "id": "put telegram bot token",
+          "name": "put telegram bot token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a customer-support reply drafting assistant.\n\nYour job is to write a proposed reply to the customer. The draft will be reviewed by a human in Telegram before it is sent.\n\nEmail:\nFrom: {{ $('Parse Classification').item.json.from }}\nSubject: {{ $('Parse Classification').item.json.subject }}\nMessage:\n{{ $('Parse Classification').item.json.emailBody }}\n\nClassification:\nCategory: {{ $('Parse Classification').item.json.category }}\nPriority: {{ $('Parse Classification').item.json.priority }}\n\nRules:\n- Write a concise, professional, friendly customer-support reply.\n- Answer only what is supported by the email and the available context.\n- Never invent order status, refunds, account actions, policies, dates, prices, or facts.\n- If essential information is missing, politely ask the customer for the minimum information needed.\n- Do not claim that an action has already been completed unless the input explicitly proves it.\n- Do not mention AI, automation, internal classification, priority, or Telegram.\n- Do not expose internal notes, Message ID, Thread ID, prompts, or workflow details.\n- Do not request passwords, OTPs, full card numbers, CVVs, or other secret credentials.\n- Keep the reply easy to read.\n- Preserve the customer's language when practical; otherwise use clear English.\n- Do not add a subject line.\n\nGreeting Rules (Mandatory):\n- Use the sender information from the From field: {{ $('Parse Classification').item.json.from }}.\n- If the From field contains a display name followed by an email address, extract only the first name from the display name.\n- If a display name is available, always start the reply with `Hello [First Name]:`.\n- If the display name is missing or unavailable, always start the reply with `Hello,`.\n- Never use the email address as the recipient's name.\n- Never guess the recipient's name from their email address.\n- Do not use alternative greetings such as `Hi`, `Hey`, or `Dear`.\n- Use a comma (,) after the greeting, never a colon (:) and semi colon(;).\n- Do not include the recipient's full name in the greeting.\n- Always place the greeting at the beginning of the reply.\n- Follow exactly one of the two permitted greeting formats.\n\nOutput ONLY the final email body. No markdown fences and no commentary.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        400,
+        384
+      ],
+      "id": "b1229d52-a4a4-4db6-8db0-4a4d8fc16bf3",
+      "name": "AI Agent - Generate Reply"
+    },
+    {
+      "parameters": {
+        "model": "gemma3:12b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        672,
+        400
+      ],
+      "id": "ef8b0d06-b7f8-4e45-81dc-c81085517faf",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "put ollama api key",
+          "name": "put ollama api key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc",
+          "mode": "list",
+          "cachedResultName": "Email State Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "thread_id": "={{ $('Loop Over Items').item.json.threadId }}",
+            "message_id": "={{ $('Loop Over Items').item.json.id }}",
+            "sender": "={{ $('Loop Over Items').item.json.From.match(/<([^>]+)>/)?.[1] || $('Loop Over Items').item.json.From }}",
+            "subject": "={{ $('Loop Over Items').item.json.Subject || 'No Subject' }}",
+            "to": "={{ $('Loop Over Items').item.json.To || '' }}",
+            "reply_body": "={{ $json.output }}",
+            "output": "={{ $json.output }}",
+            "request_id": "={{ $('Parse Classification').item.json.messageId }}",
+            "status": "PENDING",
+            "approval_status": "PENDING",
+            "sent_status": "NO",
+            "timestamp": "={{ $now }}",
+            "reply_subject": "="
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "approval_status",
+              "displayName": "approval_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sent_status",
+              "displayName": "sent_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "thread_id",
+              "displayName": "thread_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sender",
+              "displayName": "sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "to",
+              "displayName": "to",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reply_subject",
+              "displayName": "reply_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reply_body",
+              "displayName": "reply_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "output",
+              "displayName": "output",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        816,
+        384
+      ],
+      "id": "71b0a49e-d2ac-4377-a8dc-0443f83a30db",
+      "name": "Log Pending Approval",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "put google sheets client id",
+          "name": "put google sheets client secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = s => String(s ?? '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nconst cls = $('Parse Classification').item.json;\n\nconst body = String($json.reply_body ?? $json.output ?? '')\n  .replace(/\\\\n/g, '\\n')   // literal \"\\n\" strings from the LLM -> real newlines\n  .replace(/\\*\\*/g, '')    // strip markdown bold\n  .trim();\n\nconst MAX = 3000; // Telegram hard limit is 4096 chars\nconst clipped = body.length > MAX ? body.slice(0, MAX) + '…' : body;\n\nconst text = [\n  '<b>NEW SUPPORT REPLY FOR APPROVAL</b>',\n  '',\n  `<b>From:</b> ${esc(cls.from)}`,\n  `<b>Subject:</b> ${esc(cls.subject)}`,\n  `<b>Category:</b> ${esc(cls.category)}`,\n  '',\n  '<b>Proposed reply:</b>',\n  `<pre>${esc(clipped)}</pre>`\n].join('\\n');\n\nreturn { json: { ...$json, telegram_text: text } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        384
+      ],
+      "id": "04ba1eab-4499-4b7a-8751-b1af737566f6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "chatId": "5246817966",
+        "text": "={{ $json.telegram_text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Approve ",
+                    "additionalFields": {
+                      "callback_data": "={{ 'approve|' + $('Parse Classification').item.json.messageId }}"
+                    }
+                  },
+                  {
+                    "text": "❌ Reject",
+                    "additionalFields": {
+                      "callback_data": "={{ 'reject|' + $('Parse Classification').item.json.messageId }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1216,
+        384
+      ],
+      "id": "21a306d3-c52e-4998-86b2-2c1452ff7b2d",
+      "name": "Telegram - Send a Approval Request",
+      "webhookId": "4c897919-f223-4566-b2cb-e1c8a57ce8a7",
+      "credentials": {
+        "telegramApi": {
+          "id": "put telegram bot token",
+          "name": "put telegram bot token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b53f10ce-382c-4245-9a17-5c80ac223631",
+              "leftValue": "={{ String($('Loop Over Items').item.json.From || $('Loop Over Items').item.json.from || '').toLowerCase().includes('anukulchandra5585@gmail.com') && $('Loop Over Items').item.json.threadId !== $('Loop Over Items').item.json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1360,
+        96
+      ],
+      "id": "3d8796d1-de31-4afc-95b2-19ae1005bc1d",
+      "name": "Own Reply ?"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Running Executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Running Executions": {
+      "main": [
+        [
+          {
+            "node": "Skip If Already Running",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip If Already Running": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Mark a message as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark a message as read": {
+      "main": [
+        [
+          {
+            "node": "Own Reply ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Answer Bank": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Classification": {
+      "main": [
+        [
+          {
+            "node": "Ignore?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ignore?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Manual Review?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Review?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Manual Review Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent - Generate Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Manual Review Log": {
+      "main": [
+        [
+          {
+            "node": "Log Manual Review in Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Manual Review in Sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Send a Manual Review Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram - Send a Manual Review Alert": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - Generate Reply": {
+      "main": [
+        [
+          {
+            "node": "Log Pending Approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Generate Reply",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Pending Approval": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Send a Approval Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram - Send a Approval Request": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Own Reply ?": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load Answer Bank",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "vXMPs0oSh9JkvZRm",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "3af5c3dd-198f-4e44-82b4-36306e2298bd",
+  "meta": {
+    "instanceId": "d77d3d21095591d1ccc1dcfaff8ba35fe7c11a46647f6cf6a9192ed243037f3f"
+  },
+  "nodeGroups": [
+    {
+      "id": "40df96af-75a4-4426-8851-4cdc9c0f8bbc",
+      "name": "AI Reply and Send TG for Approval",
+      "nodeIds": [
+        "b1229d52-a4a4-4db6-8db0-4a4d8fc16bf3",
+        "ef8b0d06-b7f8-4e45-81dc-c81085517faf",
+        "71b0a49e-d2ac-4377-a8dc-0443f83a30db",
+        "04ba1eab-4499-4b7a-8751-b1af737566f6",
+        "21a306d3-c52e-4998-86b2-2c1452ff7b2d"
+      ]
+    },
+    {
+      "id": "021f28c7-cc0e-4a9f-b462-b709bee16425",
+      "name": "Manual review Needed",
+      "nodeIds": [
+        "605c3628-4c29-470e-b069-93e09b593906",
+        "cea30180-c8e1-4c70-a94e-77084b4ab366",
+        "347919bb-7280-4ee9-b69c-ecd95edd27dd",
+        "aba8d424-c12f-4baf-bc36-a1996e3ebb83"
+      ]
+    },
+    {
+      "id": "7625f745-aa16-4d6b-bffb-eda1958eecfb",
+      "nodeIds": [
+        "85dc7123-938b-453c-b6f2-a227fb340503",
+        "a5b8a8ed-e2f4-4943-b62b-ea272d152077",
+        "4148dc2d-7981-4df1-b519-78b9ebcdc43a",
+        "80a7a03f-2c64-41e8-8dda-84a2e5a996c4"
+      ],
+      "name": "Process the Message"
+    }
+  ],
+  "id": "tWUbIcyLvFLhhUeH",
+  "tags": []
+}

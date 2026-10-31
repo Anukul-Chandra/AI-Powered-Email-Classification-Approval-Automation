@@ -1,0 +1,1286 @@
+{
+  "name": "Telegram Approval System- akmartinez",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "id": "6a12e1e1-880c-45af-9af6-1ae177206c4e",
+      "name": "Telegram Approval Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2160,
+        976
+      ],
+      "webhookId": "4ef7c8fd-3589-44f9-8d7e-ac252008edf1",
+      "credentials": {
+        "telegramApi": {
+          "id": "put telegram bot token",
+          "name": "put telegram bot token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// const callback = $json.callback_query;\n\n// if (!callback) {\n//   return [{\n//     json: {\n//       valid_command: false,\n//       error: 'No callback query received'\n//     }\n//   }];\n// }\n\n// const callbackData = String(callback.data || '').trim();\n\n// const parts = callbackData.split('|');\n\n// const action = String(parts[0] || '').trim().toUpperCase();\n// const requestId = String(parts[1] || '').trim();\n\n// const chatId = String(\n//   callback.message?.chat?.id || ''\n// );\n\n// const userId = String(\n//   callback.from?.id || ''\n// );\n\n// return [{\n//   json: {\n//     action,\n//     request_id: requestId,\n\n//     telegram_chat_id: chatId,\n//     telegram_user_id: userId,\n\n//     authorized_chat: chatId === '5246817966',\n//     authorized_user: userId === '5246817966',\n\n//     valid_command:\n//       (action === 'APPROVE' || action === 'REJECT') &&\n//       !!requestId,\n\n//     callback_query_id: callback.id\n//   }\n// }];\n\n\n\nconst callback = $json.callback_query;\n\nif (!callback) {\n  return [{\n    json: {\n      valid_command: false,\n      error: 'No callback query received'\n    }\n  }];\n}\n\nconst callbackData = String(callback.data || '').trim();\n\nconst parts = callbackData.split('|');\n\nconst action = String(parts[0] || '').trim().toUpperCase();\nconst requestId = String(parts[1] || '').trim();\n\nconst chatId = String(\n  callback.message?.chat?.id || ''\n);\n\nconst userId = String(\n  callback.from?.id || ''\n);\n\nreturn [{\n  json: {\n    action,\n    request_id: requestId,\n\n    telegram_chat_id: chatId,\n    telegram_user_id: userId,\n\n    authorized_chat: chatId === '5246817966',\n    authorized_user: userId,\n\n    valid_command:\n      (action === 'APPROVE' || action === 'REJECT' || action === 'MARK_REVIEWED') &&\n      !!requestId,\n\n    callback_query_id: callback.id\n  }\n}];"
+      },
+      "id": "de0369e7-9d6c-40ab-b841-602b619f787d",
+      "name": "Parse Approval Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1904,
+        976
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ad63283b-61b4-42f6-af54-74e4a8813e1d",
+              "leftValue": "={{ $json.authorized_chat && $json.authorized_user && $json.valid_command }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "506e27da-5143-40f5-bfed-b4107500f6fa",
+      "name": "Authorized Approval?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1696,
+        976
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_chat_id }}",
+        "text": "Unauthorized or invalid approval command. No email was sent.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "99fb0ca6-714c-45fa-91e6-83e9a5c634f8",
+      "name": "Telegram - Unauthorized Approval",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1344,
+        1136
+      ],
+      "webhookId": "8c643014-0c92-4547-aceb-f8ffbf3b39db",
+      "credentials": {
+        "telegramApi": {
+          "id": "put telegram bot token",
+          "name": "put telegram bot token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc",
+          "mode": "list",
+          "cachedResultName": "Email State Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "request_id",
+              "lookupValue": "={{ $json.request_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "30b0ebf6-e64a-449a-a86b-dfa02bbaebd8",
+      "name": "Lookup Approval State",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -928,
+        672
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "put google sheets client id",
+          "name": "put google sheets client secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "be31604d-c852-4e69-b080-6073f0d74898",
+              "leftValue": "={{ !!$json.request_id && $json.sent_status !== 'YES' && $json.status !== 'SENT' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "66c68bc6-a71e-4fe5-8087-9146d19c717d",
+      "name": "Approval Exists And Not Sent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -720,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "facebc28-71df-46c7-8c2f-069ed3c9feb9",
+              "leftValue": "={{ $('Parse Approval Command').item.json.action }}",
+              "rightValue": "APPROVE",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "78bff13b-d9be-422d-bb67-176fc365ad91",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -464,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc",
+          "mode": "list",
+          "cachedResultName": "Email State Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $now }}",
+            "status": "REJECTED",
+            "approval_status": "REJECTED",
+            "sent_status": "NO",
+            "request_id": "={{ $('Lookup Approval State').item.json.request_id }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "request_id"
+          ],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "approval_status",
+              "displayName": "approval_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sent_status",
+              "displayName": "sent_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "thread_id",
+              "displayName": "thread_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sender",
+              "displayName": "sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "to",
+              "displayName": "to",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reply_subject",
+              "displayName": "reply_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reply_body",
+              "displayName": "reply_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "output",
+              "displayName": "output",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "71446e63-ae16-4098-9f12-d7f9d7fbf65c",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -224,
+        656
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "put google sheets client id",
+          "name": "put google sheets client secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Approval Trigger').first().json.callback_query.message.chat.id }}",
+        "text": "={{ `Rejected. No email was sent. Request ID: ${$json.request_id}` }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "09596976-4012-422a-98bf-b8e19d464d76",
+      "name": "Telegram - Rejection Confirmed",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        656
+      ],
+      "webhookId": "1f055bba-0354-4306-8c90-c5cf7e4b69b9",
+      "credentials": {
+        "telegramApi": {
+          "id": "put telegram bot token",
+          "name": "put telegram bot token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc",
+          "mode": "list",
+          "cachedResultName": "Email State Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "request_id": "={{ $('Lookup Approval State').item.json.request_id }}",
+            "sent_status": "YES",
+            "approval_status": "APPROVED",
+            "status": "SENT",
+            "timestamp": "={{ $now }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "request_id"
+          ],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "approval_status",
+              "displayName": "approval_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sent_status",
+              "displayName": "sent_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "thread_id",
+              "displayName": "thread_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sender",
+              "displayName": "sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "to",
+              "displayName": "to",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reply_subject",
+              "displayName": "reply_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reply_body",
+              "displayName": "reply_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "output",
+              "displayName": "output",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "99682857-b5cb-45ed-8422-9e3c887b8062",
+      "name": "Log Sent Reply",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        192,
+        448
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "put google sheets client id",
+          "name": "put google sheets client secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Approval Command').item.json.telegram_chat_id }}",
+        "text": "={{ 'Approved reply sent. Request ID: ' + $('Parse Approval Command').item.json.request_id }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "2f24e4bf-b36e-42b3-a1a1-ee81ef66f422",
+      "name": "Telegram - Send Confirmation",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        448
+      ],
+      "webhookId": "5d7ff4ea-0860-4217-ad12-e02d92022a61",
+      "credentials": {
+        "telegramApi": {
+          "id": "put telegram bot token",
+          "name": "put telegram bot token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "={{ $('Parse Approval Command').item.json.telegram_chat_id }}",
+        "messageId": "={{ $('Telegram Approval Trigger').item.json.callback_query.message.message_id }}",
+        "text": "=✅ APPROVED  This support reply has been approved and sent.  Request ID: {{ $('Parse Approval Command').item.json.request_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        448
+      ],
+      "id": "ad4023ca-a1df-4372-b124-f311c2c3dc2c",
+      "name": "Remove Approval Buttons",
+      "webhookId": "a6660d05-798f-4a13-bd91-e05b8e1078f9",
+      "credentials": {
+        "telegramApi": {
+          "id": "put telegram bot token",
+          "name": "put telegram bot token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "APPROVE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "13edb77b-f82a-4fde-a3f8-f505bde60297"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "APPROVE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "916edd94-391f-40b2-8fd4-5d68c18a1b89",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "REJECT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "REJECT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "654bcc60-5332-42f1-9034-8c2c1bd10d9b",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "MARK_REVIEWED",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "MARK_REVIEWED"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1328,
+        848
+      ],
+      "id": "556b6fe2-eba6-49cb-b496-bb7d101e4240",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc",
+          "mode": "list",
+          "cachedResultName": "Email State Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "request_id",
+              "lookupValue": "={{ $json.request_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f2ea458e-bcc1-42bc-8d60-77cbb2b3cb3f",
+      "name": "Lookup Manual Review",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -944,
+        1104
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "put google sheets client id",
+          "name": "put google sheets client secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4a506163-2100-4e6e-85f4-d996fec31c18",
+              "leftValue": "={{ $input.all().length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -720,
+        1104
+      ],
+      "id": "2bcdcf26-b49a-4e98-b2ea-67b0710b987a",
+      "name": "Manual Review Exists?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc",
+          "mode": "list",
+          "cachedResultName": "Email State Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OfmCjJlfoqcCiwbLI6frburEaKWopitwKQ0z62NYqhc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "request_id": "={{ $('Parse Approval Command').item.json.request_id }}",
+            "timestamp": "={{ $now }}",
+            "status": "REVIEWED",
+            "approval_status": "REVIEWED",
+            "sent_status": "NO"
+          },
+          "matchingColumns": [
+            "request_id"
+          ],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "approval_status",
+              "displayName": "approval_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sent_status",
+              "displayName": "sent_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "thread_id",
+              "displayName": "thread_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sender",
+              "displayName": "sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "to",
+              "displayName": "to",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reply_subject",
+              "displayName": "reply_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reply_body",
+              "displayName": "reply_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "output",
+              "displayName": "output",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -464,
+        992
+      ],
+      "id": "ad9d86c1-624a-4ca7-9047-ec78ff54a283",
+      "name": "Update Manual Review",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "put google sheets client id",
+          "name": "put google sheets client secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "={{ $('Parse Approval Command').item.json.telegram_chat_id }}",
+        "messageId": "={{ $('Telegram Approval Trigger').item.json.callback_query.message.message_id }}",
+        "text": "=✅ REVIEWED\n\nThis manual review has been marked as reviewed.\n\nRequest ID: {{ $('Parse Approval Command').item.json.request_id }}\n\nNo automatic reply was sent.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -224,
+        992
+      ],
+      "id": "945ce7b3-cf80-4a67-b97e-4a762fec026b",
+      "name": "Telegram - Mark Review Completed",
+      "webhookId": "a6660d05-798f-4a13-bd91-e05b8e1078f9",
+      "credentials": {
+        "telegramApi": {
+          "id": "put telegram bot token",
+          "name": "put telegram bot token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// const esc = s => String(s ?? '')\n//   .replace(/&/g, '&amp;')\n//   .replace(/</g, '&lt;')\n//   .replace(/>/g, '&gt;');\n\n// // escape first, then turn **bold** into <b>\n// const fmt = s => esc(s).replace(/\\*\\*(.+?)\\*\\*/g, '<b>$1</b>');\n\n// const text = String($json.reply_body ?? $json.output ?? '')\n//   .replace(/\\\\r/g, '')\n//   .replace(/\\\\n/g, '\\n')      // literal \"\\n\" -> real newline\n//   .replace(/\\r\\n/g, '\\n')\n//   .trim();\n\n// const html = text\n//   .split(/\\n\\s*\\n/)           // paragraphs = blank-line separated\n//   .map(b => b.trim())\n//   .filter(Boolean)\n//   .map(block => {\n//     const lines = block.split('\\n').map(l => l.trim()).filter(Boolean);\n//     const bullet = /^[*\\-•]\\s+/;\n//     if (lines.every(l => bullet.test(l))) {\n//       return '<ul>' + lines.map(l => `<li>${fmt(l.replace(bullet, ''))}</li>`).join('') + '</ul>';\n//     }\n//     return `<p>${lines.map(fmt).join('<br>')}</p>`;\n//   })\n//   .join('');\n\n// const signature = '<p>Best regards,<br>Support Team</p>'; // change as needed\n\n// return {\n//   json: {\n//     ...$json,\n//     email_html: `<div style=\"font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#222\">${html}${signature}</div>`\n//   }\n// };\n\n\n\n\n\n\n// const esc = s => String(s ?? '')\n//   .replace(/&/g, '&amp;')\n//   .replace(/</g, '&lt;')\n//   .replace(/>/g, '&gt;');\n\n// // Escape first, then turn **bold** into <b>\n// const fmt = s => esc(s).replace(/\\*\\*(.+?)\\*\\*/g, '<b>$1</b>');\n\n// // Get reply text\n// const text = String($json.reply_body ?? $json.output ?? '')\n//   .replace(/\\\\r/g, '')\n//   .replace(/\\\\n/g, '\\n')\n//   .replace(/\\r\\n/g, '\\n')\n//   .trim();\n\n// // Extract sender display name from common fields.\n// // Examples: \"Alex Smith <alex@example.com>\" -> \"Alex\"\n// // \"alex@example.com\" -> no display name\n// const sender = String(\n//   $json.sender ??\n//   $json.From ??\n//   $json.from ??\n//   ''\n// ).trim();\n\n// const match = sender.match(/^\"?([^\"<]+?)\"?\\s*<[^>]+>$/);\n// const displayName = match\n//   ? match[1].trim()\n//   : '';\n\n// const firstName = displayName\n//   .split(/\\s+/)\n//   .filter(Boolean)[0]\n//   ?.replace(/[\",']/g, '') ?? '';\n\n// const greeting = firstName\n//   ? `Hello ${firstName},`\n//   : 'Hello,';\n\n// // Remove an existing greeting at the start to avoid duplication\n// const bodyWithoutGreeting = text.replace(\n//   /^(?:(?:hi|hello|dear)\\s+[^,\\n]+,?\\s*)\\n*/i,\n//   ''\n// ).trim();\n\n// const finalText = `${greeting}\\n\\n${bodyWithoutGreeting}`;\n\n// const html = finalText\n//   .split(/\\n\\s*\\n/)\n//   .map(b => b.trim())\n//   .filter(Boolean)\n//   .map(block => {\n//     const lines = block\n//       .split('\\n')\n//       .map(l => l.trim())\n//       .filter(Boolean);\n\n//     const bullet = /^[*\\-•]\\s+/;\n\n//     if (lines.every(l => bullet.test(l))) {\n//       return '<ul>' +\n//         lines.map(l =>\n//           `<li>${fmt(l.replace(bullet, ''))}</li>`\n//         ).join('') +\n//         '</ul>';\n//     }\n\n//     return `<p>${lines.map(fmt).join('<br>')}</p>`;\n//   })\n//   .join('');\n\n// const signature = '<p>Best regards,<br>Support Team</p>';\n\n// return {\n//   json: {\n//     ...$json,\n//     email_html:\n//       `<div style=\"font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#222\">${html}${signature}</div>`\n//   }\n// };\n\n\n\n\n\n\n\n\nconst esc = s => String(s ?? '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\n// Escape HTML first, then format **bold** text\nconst fmt = s =>\n  esc(s).replace(/\\*\\*(.+?)\\*\\*/g, '<b>$1</b>');\n\n// Use the existing reply body; fall back to output if empty\nconst text = String(\n  $json.reply_body || $json.output || ''\n)\n  .replace(/\\\\r/g, '')\n  .replace(/\\\\n/g, '\\n')\n  .replace(/\\r\\n/g, '\\n')\n  .trim();\n\n// Convert the existing text into HTML\nconst html = text\n  .split(/\\n\\s*\\n/)\n  .map(block => block.trim())\n  .filter(Boolean)\n  .map(block => {\n    const lines = block\n      .split('\\n')\n      .map(line => line.trim())\n      .filter(Boolean);\n\n    const bullet = /^[*\\-•]\\s+/;\n\n    // Convert bullet lists into HTML lists\n    if (\n      lines.length > 0 &&\n      lines.every(line => bullet.test(line))\n    ) {\n      return (\n        '<ul>' +\n        lines\n          .map(line =>\n            `<li>${fmt(line.replace(bullet, ''))}</li>`\n          )\n          .join('') +\n        '</ul>'\n      );\n    }\n\n    // Convert normal paragraphs and line breaks\n    return `<p>${lines.map(fmt).join('<br>')}</p>`;\n  })\n  .join('');\n\n// Preserve all original fields and add the HTML version\nreturn {\n  json: {\n    ...$json,\n    email_html:\n      `<div style=\"font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#222\">${html}</div>`\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        448
+      ],
+      "id": "de8d1ddc-aee2-417f-b4cf-8ed131fd1e5f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Lookup Approval State').item.json.message_id }}",
+        "message": "={{ $json.email_html }}",
+        "options": {
+          "appendAttribution": false,
+          "replyToSenderOnly": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        448
+      ],
+      "id": "bd61287f-f9db-4be3-95b0-305f1ddea48e",
+      "name": "Reply to the message",
+      "webhookId": "44c07309-01ee-4ce0-8912-6b9532068ba7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "put gmail client id",
+          "name": "put gmail client secret"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Approval Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Approval Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Approval Command": {
+      "main": [
+        [
+          {
+            "node": "Authorized Approval?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authorized Approval?": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram - Unauthorized Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Approval State": {
+      "main": [
+        [
+          {
+            "node": "Approval Exists And Not Sent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approval Exists And Not Sent?": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Rejection": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Rejection Confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Sent Reply": {
+      "main": [
+        [
+          {
+            "node": "Remove Approval Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Approval Buttons": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Send Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Lookup Approval State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lookup Approval State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lookup Manual Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Manual Review": {
+      "main": [
+        [
+          {
+            "node": "Manual Review Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Review Exists?": {
+      "main": [
+        [
+          {
+            "node": "Update Manual Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Manual Review": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Mark Review Completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Reply to the message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to the message": {
+      "main": [
+        [
+          {
+            "node": "Log Sent Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "vXMPs0oSh9JkvZRm",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "c362cea7-e903-419b-839f-c1ad0512f75a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d77d3d21095591d1ccc1dcfaff8ba35fe7c11a46647f6cf6a9192ed243037f3f"
+  },
+  "nodeGroups": [],
+  "id": "OhhgiDCN74RwLHZ4",
+  "tags": []
+}
